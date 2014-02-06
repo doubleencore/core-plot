@@ -41,4 +41,7 @@
 @property (nonatomic, readwrite) CGFloat momentumAcceleration;
 @property (nonatomic, readwrite) CGFloat bounceAcceleration;
 
+@property (nonatomic, readwrite) BOOL elasticGlobalXRange;
+@property (nonatomic, readwrite) BOOL elasticGlobalYRange;
+
 @end

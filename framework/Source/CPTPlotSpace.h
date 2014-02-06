@@ -19,6 +19,18 @@ extern NSString *const CPTPlotSpaceCoordinateMappingDidChangeNotification;
 
 /// @}
 
+typedef struct
+{
+	BOOL shouldScaleX;
+	BOOL shouldScaleY;
+} CPTShouldScaleStruct;
+
+static inline CPTShouldScaleStruct CPTMakeShouldScaleStruct(BOOL shouldScaleX, BOOL shouldScaleY)
+{
+	CPTShouldScaleStruct shouldScale = {shouldScaleX, shouldScaleY};
+	return shouldScale;
+}
+
 /**
  *  @brief Plot space delegate.
  **/
@@ -36,7 +48,7 @@ extern NSString *const CPTPlotSpaceCoordinateMappingDidChangeNotification;
  *  @return @YES if the gesture should be handled by the plot space, and @NO if not.
  *  In either case, the delegate may choose to take extra actions, or handle the scaling itself.
  **/
--(BOOL)plotSpace:(CPTPlotSpace *)space shouldScaleBy:(CGFloat)interactionScale aboutPoint:(CGPoint)interactionPoint;
+-(CPTShouldScaleStruct)plotSpace:(CPTPlotSpace *)space shouldScaleBy:(CGFloat)interactionScale aboutPoint:(CGPoint)interactionPoint;
 
 /// @}
 

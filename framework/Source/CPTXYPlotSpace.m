@@ -1100,6 +1100,7 @@ CGFloat firstPositiveRoot(CGFloat a, CGFloat b, CGFloat c)
 
 /// @cond
 
+/*
 -(void)scaleBy:(CGFloat)interactionScale aboutPoint:(CGPoint)plotAreaPoint
 {
     CPTPlotArea *plotArea = self.graph.plotAreaFrame.plotArea;
@@ -1173,6 +1174,108 @@ CGFloat firstPositiveRoot(CGFloat a, CGFloat b, CGFloat c)
     self.allowsMomentumY = NO;
     self.yRange          = newRangeY;
     self.allowsMomentumY = oldMomentum;
+}
+ */
+
+-(void)scaleBy:(CGFloat)interactionScale aboutPoint:(CGPoint)plotAreaPoint
+{
+    CPTPlotArea *plotArea = self.graph.plotAreaFrame.plotArea;
+    
+    if ( !plotArea || (interactionScale <= 1.e-6) ) {
+        return;
+    }
+    if ( ![plotArea containsPoint:plotAreaPoint] ) {
+        return;
+    }
+    
+    // Ask the delegate if it is OK
+    id<CPTPlotSpaceDelegate> theDelegate = self.delegate;
+    
+	CPTShouldScaleStruct shouldScaleStruct = {NO, NO};
+    if ( [theDelegate respondsToSelector:@selector(plotSpace:shouldScaleBy:aboutPoint:)] ) {
+        shouldScaleStruct = [theDelegate plotSpace:self shouldScaleBy:interactionScale aboutPoint:plotAreaPoint];
+    }
+	
+	if (!shouldScaleStruct.shouldScaleX && !shouldScaleStruct.shouldScaleY)
+	{
+		return;
+	}
+    
+    // Determine point in plot coordinates
+    NSDecimal const decimalScale = CPTDecimalFromCGFloat(interactionScale);
+    NSDecimal plotInteractionPoint[2];
+    [self plotPoint:plotInteractionPoint numberOfCoordinates:2 forPlotAreaViewPoint:plotAreaPoint];
+    
+    // Cache old ranges
+    CPTPlotRange *oldRangeX = self.xRange;
+    CPTPlotRange *oldRangeY = self.yRange;
+    
+    // Lengths are scaled by the pinch gesture inverse proportional
+    NSDecimal newLengthX = shouldScaleStruct.shouldScaleX ? CPTDecimalDivide(oldRangeX.length, decimalScale) : oldRangeX.length;
+    NSDecimal newLengthY = shouldScaleStruct.shouldScaleY ? CPTDecimalDivide(oldRangeY.length, decimalScale) : oldRangeY.length;
+    
+    // New locations
+    NSDecimal newLocationX;
+	if (shouldScaleStruct.shouldScaleX)
+	{
+		if ( CPTDecimalGreaterThanOrEqualTo( oldRangeX.length, CPTDecimalFromInteger(0) ) ) {
+			NSDecimal oldFirstLengthX = CPTDecimalSubtract(plotInteractionPoint[CPTCoordinateX], oldRangeX.minLimit); // x - minX
+			NSDecimal newFirstLengthX = CPTDecimalDivide(oldFirstLengthX, decimalScale);                              // (x - minX) / scale
+			newLocationX = CPTDecimalSubtract(plotInteractionPoint[CPTCoordinateX], newFirstLengthX);
+		}
+		else {
+			NSDecimal oldSecondLengthX = CPTDecimalSubtract(oldRangeX.maxLimit, plotInteractionPoint[0]); // maxX - x
+			NSDecimal newSecondLengthX = CPTDecimalDivide(oldSecondLengthX, decimalScale);                // (maxX - x) / scale
+			newLocationX = CPTDecimalAdd(plotInteractionPoint[CPTCoordinateX], newSecondLengthX);
+		}
+	}
+    
+	NSDecimal newLocationY;
+	if (shouldScaleStruct.shouldScaleY)
+	{
+		if ( CPTDecimalGreaterThanOrEqualTo( oldRangeY.length, CPTDecimalFromInteger(0) ) ) {
+			NSDecimal oldFirstLengthY = CPTDecimalSubtract(plotInteractionPoint[CPTCoordinateY], oldRangeY.minLimit); // y - minY
+			NSDecimal newFirstLengthY = CPTDecimalDivide(oldFirstLengthY, decimalScale);                              // (y - minY) / scale
+			newLocationY = CPTDecimalSubtract(plotInteractionPoint[CPTCoordinateY], newFirstLengthY);
+		}
+		else {
+			NSDecimal oldSecondLengthY = CPTDecimalSubtract(oldRangeY.maxLimit, plotInteractionPoint[1]); // maxY - y
+			NSDecimal newSecondLengthY = CPTDecimalDivide(oldSecondLengthY, decimalScale);                // (maxY - y) / scale
+			newLocationY = CPTDecimalAdd(plotInteractionPoint[CPTCoordinateY], newSecondLengthY);
+		}
+	}
+    
+    // New ranges
+    CPTPlotRange *newRangeX;
+	if (shouldScaleStruct.shouldScaleX)
+	{
+		newRangeX = [[[CPTPlotRange alloc] initWithLocation:newLocationX length:newLengthX] autorelease];
+	}
+	else
+	{
+		[self xRange];
+	}
+	
+	CPTPlotRange *newRangeY;
+	if (shouldScaleStruct.shouldScaleY)
+	{
+		newRangeY = [[[CPTPlotRange alloc] initWithLocation:newLocationY length:newLengthY] autorelease];
+	}
+	else
+	{
+		newRangeY = self.yRange;
+	}
+    
+    BOOL oldElasticGlobalXRange = self.elasticGlobalXRange;
+    BOOL oldElasticGlobalYRange = self.elasticGlobalYRange;
+    self.elasticGlobalXRange = NO;
+    self.elasticGlobalYRange = NO;
+    
+    self.xRange = newRangeX;
+    self.yRange = newRangeY;
+    
+    self.elasticGlobalXRange = oldElasticGlobalXRange;
+    self.elasticGlobalYRange = oldElasticGlobalYRange;
 }
 
 /// @endcond
